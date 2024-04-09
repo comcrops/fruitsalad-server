@@ -2,6 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
+	_ "fmt"
+	. "fruitsalad-server/model"
 	"io"
 	"log"
 	"net/http"
@@ -11,22 +14,32 @@ type MyStruct struct {
 	Beidl int8
 }
 
+type User struct {
+	Username string
+	password string
+	token string
+}
+
+type Guess struct {
+	value RgbValue
+	Guess RgbValue
+	Player User
+}
+
 func main() {
-	http.HandleFunc("/hello", helloHandler)
+	http.HandleFunc("/game/new", generateRandomGame)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
-
-func helloHandler(w http.ResponseWriter, req *http.Request) {
-	myStruct := &MyStruct {
-		Beidl: 3,
-	}
-	jsonData, err := json.Marshal(myStruct)
+func generateRandomGame(w http.ResponseWriter, req *http.Request) {
+	value := GetRandomRgbValue()
+	jsonData, err := json.Marshal(value)
+	fmt.Printf("%s", string(jsonData))
 
 	if err != nil {
-		log.Fatalf("SAMC")
+		log.Printf("There was an error converting the RgbValue to JSON")
 	}
-
-	io.WriteString(w, string(jsonData[:]))
+	io.WriteString(w, string(jsonData))
+	
 }
 
