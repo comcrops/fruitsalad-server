@@ -4,18 +4,26 @@ import (
 	"math/rand"
 )
 
-type RgbValue struct {
+type Color struct {
 	Red uint8
 	Green uint8
 	Blue uint8
 }
 
-func GetRandomRgbValue() RgbValue {
+func newColor() Color {
+	return Color{
+		0,
+		0,
+		0,
+	}
+}
+
+func GetRandomRgbValue() Color {
 	red := uint8(rand.Int())
 	green := uint8(rand.Int())
 	blue := uint8(rand.Int())
 
-	return RgbValue{
+	return Color{
 		red,
 		green,
 		blue,
