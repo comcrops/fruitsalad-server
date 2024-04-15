@@ -19,8 +19,20 @@ type Game struct {
 	Guess  *Color
 }
 
-func (game Game) calculateScore() float64 {
-	return 1
+func (game Game) calculateScore() (float64, error) {
+	if game.Guess == nil {
+		return 0, errors.New("Game has to be guessed in order to calculate a score")
+	}
+
+	percentage := 0.0
+
+	percentage += float64(game.Guess.Red) / float64(game.Value.Red)
+	percentage += float64(game.Guess.Green) / float64(game.Value.Green)
+	percentage += float64(game.Guess.Blue) / float64(game.Value.Blue)
+
+	percentage /= 3
+
+	return percentage, nil
 }
 
 func (game *Game) setGuess(guess Color) error {
