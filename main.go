@@ -13,7 +13,6 @@ import (
 type Guess struct {
 	GameId int
 	Guess  Color
-	PlayId int
 }
 
 func main() {
@@ -32,6 +31,11 @@ func methodNotAllowed(w http.ResponseWriter, req *http.Request) {
 func badRequest(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusBadRequest)
 	io.WriteString(w, "400 - Bad Request")
+}
+
+func notFound(w http.ResponseWriter) {
+	w.WriteHeader(http.StatusNotFound)
+	io.WriteString(w, "404 - Not Found")
 }
 
 func generateRandomGame(w http.ResponseWriter, req *http.Request) {
@@ -56,4 +60,14 @@ func guessGame(w http.ResponseWriter, req *http.Request) {
 		badRequest(w)
 		return
 	}
+
+	game, err := GetGameById(guess.GameId)
+
+	if err != nil {
+		log.Printf("Error while querying for game: %s", err)
+		notFound(w)
+		return
+	}
+
+	game.Guess(guess.Guess)
 }
