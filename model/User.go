@@ -3,7 +3,10 @@ package model
 import (
 	"errors"
 	. "fruitsalad-server/database"
+	"math"
 )
+
+const MAX_POINTS = 5000
 
 type User struct {
 	Id       int
@@ -19,7 +22,7 @@ type Game struct {
 	Guess  *Color
 }
 
-func (game Game) calculateScore() (float64, error) {
+func (game Game) calculateScore() (int, error) {
 	if game.Guess == nil {
 		return 0, errors.New("Game has to be guessed in order to calculate a score")
 	}
@@ -32,7 +35,7 @@ func (game Game) calculateScore() (float64, error) {
 
 	percentage /= 3
 
-	return percentage, nil
+	return int(math.Round(MAX_POINTS*percentage)), nil
 }
 
 func (game *Game) setGuess(guess Color) error {
