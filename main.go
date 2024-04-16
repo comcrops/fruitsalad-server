@@ -69,5 +69,5 @@ func guessGame(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	game.Guess(guess.Guess)
+	game.SetGuess(guess.Guess)
 }
