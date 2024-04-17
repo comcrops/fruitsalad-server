@@ -5,6 +5,7 @@ import (
 	. "fruitsalad-server/model"
 	"io"
 	"log"
+	"log/slog"
 	"net/http"
 
 	_ "github.com/lib/pq"
@@ -69,5 +70,15 @@ func guessGame(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	game.SetGuess(guess.Guess)
+	err = game.SetGuess(guess.Guess)
+	 
+	if err != nil {
+		log.Printf("Error setting the guess: %s", err)
+		badRequest(w)
+		return
+	}
+
+	jsonData, _ := json.Marshal(game)
+
+	io.WriteString(w, string(jsonData))
 }

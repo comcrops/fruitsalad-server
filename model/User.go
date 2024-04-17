@@ -1,6 +1,6 @@
 package model
 
-//import "fruitsalad-server/database"
+// import "fruitsalad-server/database"
 
 type User struct {
 	Id       int
@@ -9,7 +9,8 @@ type User struct {
 	token    string
 }
 
-func asd() {
-	//db := database.GetDatabaseConnection()
+func NewUser(username, password string) {
+	// db := database.GetDatabaseConnection()
+	
 }
 
