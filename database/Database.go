@@ -7,24 +7,14 @@ import (
 	"os"
 )
 
-var db *sql.DB
-
-// Hopefully somewhat of a singleton, dk if that actually works
 func GetDatabaseConnection() *sql.DB {
-	if db != nil {
-		return db
-	}
-
 	connection, err := sql.Open("postgres", loadDatabaseUrl())
 
 	if err != nil {
 		log.Fatalf("Error while connecting to database")
 	}
 
-	db = connection
-	defer db.Close()
-
-	return db
+	return connection
 }
 
 func loadDatabaseUrl() string {

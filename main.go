@@ -2,10 +2,10 @@ package main
 
 import (
 	"encoding/json"
-	. "fruitsalad-server/model"
+	"fmt"
+	"fruitsalad-server/model"
 	"io"
 	"log"
-	"log/slog"
 	"net/http"
 
 	_ "github.com/lib/pq"
@@ -13,7 +13,7 @@ import (
 
 type Guess struct {
 	GameId int
-	Guess  Color
+	Guess  model.Color
 }
 
 func main() {
@@ -21,6 +21,16 @@ func main() {
 	http.HandleFunc("/game/submit", guessGame)
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+
+func getAuthorizationHeader(req *http.Request) *string {
+	val := req.Header.Get("Authorization")
+
+	if val != "" {
+		return &val
+	}
+
+	return nil
 }
 
 func methodNotAllowed(w http.ResponseWriter, req *http.Request) {
@@ -34,14 +44,48 @@ func badRequest(w http.ResponseWriter) {
 	io.WriteString(w, "400 - Bad Request")
 }
 
-func notFound(w http.ResponseWriter) {
+
+// Send an empty string for additionalInfo for default behaviour
+func notFound(w http.ResponseWriter, additionalInfo string) {
 	w.WriteHeader(http.StatusNotFound)
-	io.WriteString(w, "404 - Not Found")
+	if additionalInfo != "" {
+		io.WriteString(w, fmt.Sprintf("404 - Not Found: %s", additionalInfo))
+	} else {
+		io.WriteString(w, "404 - Not Found")
+		
+	}
 }
 
 func generateRandomGame(w http.ResponseWriter, req *http.Request) {
-	value := GetRandomRgbValue()
-	jsonData, _ := json.Marshal(value)
+	token := getAuthorizationHeader(req)
+
+	var game *model.Game
+
+	if token == nil {
+		newGame, err := model.NewGame(nil)
+		if err != nil {
+			log.Printf("Error while creating guest-game: %s", err)
+			badRequest(w)
+			return
+		}
+		game = newGame
+	} else {
+		user, err := model.GetUserByToken(*token)
+		if err != nil {
+			log.Printf("UserByToken (%s) not found: %s", token, err)
+			notFound(w, "user")
+			return
+		}
+		newGame, err := model.NewGame(&user.Id)
+		if err != nil {
+			log.Printf("Error while creating game for user: %+v %s", user, err)
+			badRequest(w)
+			return
+		}
+		game = newGame
+	}
+
+	jsonData, _ := json.Marshal(game)
 
 	io.WriteString(w, string(jsonData))
 }
@@ -62,11 +106,11 @@ func guessGame(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	game, err := GetGameById(guess.GameId)
+	game, err := model.GetGameById(guess.GameId)
 
 	if err != nil {
 		log.Printf("Error while querying for game: %s", err)
-		notFound(w)
+		notFound(w, "Game")
 		return
 	}
 

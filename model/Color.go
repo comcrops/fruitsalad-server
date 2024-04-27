@@ -11,11 +11,11 @@ type Color struct {
 	Blue uint8
 }
 
-func newColor() Color {
+func newColor(red, green, blue uint8) Color {
 	return Color{
-		0,
-		0,
-		0,
+		red,
+		green,
+		blue,
 	}
 }
 
@@ -26,10 +26,6 @@ func GetRandomRgbValue() Color {
 	binary.Read(rand.Reader, binary.LittleEndian, &green)
 	binary.Read(rand.Reader, binary.LittleEndian, &blue)
 
-	return Color{
-		red,
-		green,
-		blue,
-	}
+	return newColor(red, green, blue)
 }
 
