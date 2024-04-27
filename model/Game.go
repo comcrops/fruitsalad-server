@@ -22,36 +22,41 @@ type GameGuess struct {
 }
 
 func (game Game) hasGuesses() bool {
-	return game.Guesses == nil || len(game.Guesses) == 0
+	return game.Guesses != nil && len(game.Guesses) != 0
 }
 
 func (game Game) CalculateScore() (int, error) {
-	if game.hasGuesses() {
+	if !game.hasGuesses() {
 		return 0, errors.New("Game has to be guessed in order to calculate a score")
 	}
 
 	latestGuess := game.Guesses[len(game.Guesses)-1]
 
-	percentage := 0.0
+	percentage := float64(0)
 
-	percentage += float64(latestGuess.Red) / float64(game.Value.Red)
-	percentage += float64(latestGuess.Green) / float64(game.Value.Green)
-	percentage += float64(latestGuess.Blue) / float64(game.Value.Blue)
+	percentage += 1 - float64(latestGuess.Red - game.Value.Red) / float64(255)
+	percentage += 1 - float64(latestGuess.Green - game.Value.Green) / float64(255)
+	percentage += 1 - float64(latestGuess.Blue - game.Value.Blue) / float64(255)
 
 	percentage /= 3
+	score := int(math.Round(maxPoints * percentage))
 
-	return int(math.Round(maxPoints * percentage)), nil
+	return score, nil
 }
 
-func (game *Game) SetGuess(guess Color) error {
-	if game.hasGuesses() {
-		return errors.New("Game was already guessed")
+func (game *Game) AddGuess(guess Color) error {
+	if game.Guesses == nil {
+		return errors.New("Guesses array is Nil, did you instatiate right?")
+	}
+
+	if len(game.Guesses) >= 5 {
+		return errors.New("Game must not have more than 5 guesses")
 	}
 
 	db := database.GetDatabaseConnection()
 	defer db.Close()
 
-	_, err := db.Exec("UPDATE game SET guess_red=$1, guess_green=$2, guess_blue=$3 WHERE id=$4", guess.Red, guess.Green, guess.Blue, game.Id)
+	_, err := db.Exec("INSERT INTO game_guess (game_id, red, green, blue) VALUES ($1, $2, $3, $4)", game.Id, guess.Red, guess.Green, guess.Blue)
 
 	if err != nil {
 		return err
@@ -96,7 +101,7 @@ func GetGameById(id int) (*Game, error) {
 
 	game.Guesses = make([]Color, 0)
 
-	guesses, err := db.Query("SELECT * FROM game_guess WHERE game_id=$1", game.Id)
+	guesses, err := db.Query("SELECT red, green, blue FROM game_guess WHERE game_id=$1", game.Id)
 
 	if err != nil {
 		return nil, err
@@ -104,9 +109,9 @@ func GetGameById(id int) (*Game, error) {
 
 	for guesses.Next() {
 		guess := new(GameGuess)
-		err := guesses.Scan(&guess)
+		err := guesses.Scan(&guess.Red, &guess.Green, &guess.Blue)
 		if err != nil {
-			return nil, err
+			return nil, errors.Join(errors.New("Reading the guesses failed"), err)
 		}
 
 		game.Guesses = append(game.Guesses, guess.Color)

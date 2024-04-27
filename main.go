@@ -11,14 +11,13 @@ import (
 	_ "github.com/lib/pq"
 )
 
-type Guess struct {
-	GameId int
-	Guess  model.Color
+type Score struct {
+	Score int
 }
 
 func main() {
 	http.HandleFunc("/game/new", generateRandomGame)
-	http.HandleFunc("/game/submit", guessGame)
+	http.HandleFunc("/game/addGuess", guessGame)
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
@@ -44,7 +43,6 @@ func badRequest(w http.ResponseWriter) {
 	io.WriteString(w, "400 - Bad Request")
 }
 
-
 // Send an empty string for additionalInfo for default behaviour
 func notFound(w http.ResponseWriter, additionalInfo string) {
 	w.WriteHeader(http.StatusNotFound)
@@ -52,7 +50,7 @@ func notFound(w http.ResponseWriter, additionalInfo string) {
 		io.WriteString(w, fmt.Sprintf("404 - Not Found: %s", additionalInfo))
 	} else {
 		io.WriteString(w, "404 - Not Found")
-		
+
 	}
 }
 
@@ -72,7 +70,7 @@ func generateRandomGame(w http.ResponseWriter, req *http.Request) {
 	} else {
 		user, err := model.GetUserByToken(*token)
 		if err != nil {
-			log.Printf("UserByToken (%s) not found: %s", token, err)
+			log.Printf("UserByToken (%s) not found: %s", *token, err)
 			notFound(w, "user")
 			return
 		}
@@ -97,7 +95,7 @@ func guessGame(w http.ResponseWriter, req *http.Request) {
 	}
 
 	decoder := json.NewDecoder(req.Body)
-	var guess Guess
+	var guess model.GameGuess
 	err := decoder.Decode(&guess)
 
 	if err != nil {
@@ -114,15 +112,27 @@ func guessGame(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = game.SetGuess(guess.Guess)
-	 
+	err = game.AddGuess(guess.Color)
+
 	if err != nil {
 		log.Printf("Error setting the guess: %s", err)
 		badRequest(w)
 		return
 	}
 
-	jsonData, _ := json.Marshal(game)
+	value, err := game.CalculateScore()
+
+	if err != nil {
+		log.Printf("Calculating the score for the current guess went wrong: %s", err)
+		badRequest(w)
+		return
+	}
+
+	score := &Score{
+		Score: value,
+	}
+
+	jsonData, _ := json.Marshal(score)
 
 	io.WriteString(w, string(jsonData))
 }
