@@ -9,10 +9,11 @@ import (
 const maxPoints = 5000
 
 type Game struct {
-	Id      int
-	UserId  *int
-	Value   Color
-	Guesses []Color
+	Id         int
+	UserId     *int
+	Value      Color
+	isFinished bool
+	Guesses    []Color
 }
 
 type GameGuess struct {
@@ -34,19 +35,43 @@ func (game Game) CalculateScore() (int, error) {
 
 	percentage := float64(0)
 
-	percentage += 1 - float64(latestGuess.Red - game.Value.Red) / float64(255)
-	percentage += 1 - float64(latestGuess.Green - game.Value.Green) / float64(255)
-	percentage += 1 - float64(latestGuess.Blue - game.Value.Blue) / float64(255)
+	percentage += 1 - float64(latestGuess.Red-game.Value.Red)/float64(255)
+	percentage += 1 - float64(latestGuess.Green-game.Value.Green)/float64(255)
+	percentage += 1 - float64(latestGuess.Blue-game.Value.Blue)/float64(255)
 
 	percentage /= 3
 	score := int(math.Round(maxPoints * percentage))
 
+	if score == 5000 {
+		err := game.finish()
+		if err != nil {
+			return 0, err
+		}
+	}
+
 	return score, nil
+}
+
+func (game *Game) finish() error {
+	db := database.GetDatabaseConnection()
+	_, err := db.Exec("UPDATE game SET is_finished=true WHERE id=$1", game.Id)
+
+	if err != nil {
+		return errors.Join(errors.New("Couldn't finish game"), err)
+	}
+
+	game.isFinished = true
+
+	return nil
 }
 
 func (game *Game) AddGuess(guess Color) error {
 	if game.Guesses == nil {
 		return errors.New("Guesses array is Nil, did you instatiate right?")
+	}
+
+	if game.isFinished {
+		return errors.New("Game is already finished therefore no more scores can be added")
 	}
 
 	if len(game.Guesses) >= 5 {
@@ -63,6 +88,10 @@ func (game *Game) AddGuess(guess Color) error {
 	}
 
 	game.Guesses = append(game.Guesses, guess)
+
+	if len(game.Guesses) >= 5 {
+		game.finish()
+	}
 
 	return nil
 }
@@ -94,7 +123,7 @@ func GetGameById(id int) (*Game, error) {
 	res := db.QueryRow("SELECT * FROM game WHERE id=$1", id)
 
 	game := new(Game)
-	err := res.Scan(&game.Id, &game.UserId, &game.Value.Red, &game.Value.Green, &game.Value.Blue)
+	err := res.Scan(&game.Id, &game.UserId, &game.Value.Red, &game.Value.Green, &game.Value.Blue, &game.isFinished)
 	if err != nil {
 		return nil, err
 	}

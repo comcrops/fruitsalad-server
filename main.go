@@ -32,6 +32,10 @@ func getAuthorizationHeader(req *http.Request) *string {
 	return nil
 }
 
+func jsonHeaders(w http.ResponseWriter){
+	w.Header().Add("Content-Type", "application/json")
+}
+
 func methodNotAllowed(w http.ResponseWriter, req *http.Request) {
 	log.Printf("Method %s is not allowed", req.Method)
 	w.WriteHeader(http.StatusMethodNotAllowed)
@@ -85,6 +89,7 @@ func generateRandomGame(w http.ResponseWriter, req *http.Request) {
 
 	jsonData, _ := json.Marshal(game)
 
+	jsonHeaders(w)
 	io.WriteString(w, string(jsonData))
 }
 
@@ -134,5 +139,6 @@ func guessGame(w http.ResponseWriter, req *http.Request) {
 
 	jsonData, _ := json.Marshal(score)
 
+	jsonHeaders(w)
 	io.WriteString(w, string(jsonData))
 }
