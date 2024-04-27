@@ -1,7 +1,6 @@
 package model
 
 import (
-	"database/sql"
 	"errors"
 	"fruitsalad-server/database"
 	"math"
@@ -11,7 +10,7 @@ const maxPoints = 5000
 
 type Game struct {
 	Id      int
-	UserId  sql.NullInt64
+	UserId  *int
 	Value   Color
 	Guesses []Color
 }
