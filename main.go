@@ -7,6 +7,7 @@ import (
 	"fruitsalad-server/model"
 	"io"
 	"log"
+	"log/slog"
 	"net/http"
 
 	_ "github.com/lib/pq"
@@ -17,7 +18,7 @@ type Score struct {
 }
 
 type HttpError struct {
-	Detail string
+	Detail string `json:"detail"`
 }
 
 func main() {
@@ -42,9 +43,9 @@ func jsonHeaders(w http.ResponseWriter){
 }
 
 func methodNotAllowed(w http.ResponseWriter, req *http.Request) {
-	log.Printf("Method %s is not allowed", req.Method)
-	w.WriteHeader(http.StatusMethodNotAllowed)
-	io.WriteString(w, "405 - Method Not Allowed")
+	errorMessage := fmt.Sprintf("Method %s is not allowed", req.Method)
+	slog.Error(errorMessage)
+	errorRequest(w, http.StatusMethodNotAllowed, errors.New(errorMessage))
 }
 
 //Send an empty error string for a default bad request return
@@ -57,8 +58,9 @@ func badRequest(w http.ResponseWriter, err error) {
 }
 
 func errorRequest(w http.ResponseWriter, statusCode int, err error) {
-	jsonHeaders(w)
 	w.Header().Add("Content-Type", "application/problem+json")
+	w.WriteHeader(statusCode)
+
 	data, _ := json.Marshal(&HttpError{
 		Detail: err.Error(),
 	})
@@ -67,13 +69,13 @@ func errorRequest(w http.ResponseWriter, statusCode int, err error) {
 
 // Send an empty string for additionalInfo for default behaviour
 func notFound(w http.ResponseWriter, additionalInfo string) {
-	w.WriteHeader(http.StatusNotFound)
 	if additionalInfo != "" {
-		io.WriteString(w, fmt.Sprintf("404 - Not Found: %s", additionalInfo))
+		additionalInfo = fmt.Sprintf("404 - Not Found: %s", additionalInfo)
 	} else {
-		io.WriteString(w, "404 - Not Found")
-
+		additionalInfo = "404 - Not found"
 	}
+
+	errorRequest(w, http.StatusNotFound, errors.New(additionalInfo))
 }
 
 func generateRandomGame(w http.ResponseWriter, req *http.Request) {
