@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"fruitsalad-server/model"
 	"io"
@@ -13,6 +14,10 @@ import (
 
 type Score struct {
 	Score int
+}
+
+type HttpError struct {
+	Detail string
 }
 
 func main() {
@@ -42,9 +47,22 @@ func methodNotAllowed(w http.ResponseWriter, req *http.Request) {
 	io.WriteString(w, "405 - Method Not Allowed")
 }
 
-func badRequest(w http.ResponseWriter) {
-	w.WriteHeader(http.StatusBadRequest)
-	io.WriteString(w, "400 - Bad Request")
+//Send an empty error string for a default bad request return
+func badRequest(w http.ResponseWriter, err error) {
+	if err.Error() == "" {
+		errorRequest(w, http.StatusBadRequest, errors.New("400 - Bad Request"))
+	} else {
+		errorRequest(w, http.StatusBadRequest, err)
+	}
+}
+
+func errorRequest(w http.ResponseWriter, statusCode int, err error) {
+	jsonHeaders(w)
+	w.Header().Add("Content-Type", "application/problem+json")
+	data, _ := json.Marshal(&HttpError{
+		Detail: err.Error(),
+	})
+	io.WriteString(w, string(data))
 }
 
 // Send an empty string for additionalInfo for default behaviour
@@ -67,7 +85,7 @@ func generateRandomGame(w http.ResponseWriter, req *http.Request) {
 		newGame, err := model.NewGame(nil)
 		if err != nil {
 			log.Printf("Error while creating guest-game: %s", err)
-			badRequest(w)
+			badRequest(w, err)
 			return
 		}
 		game = newGame
@@ -81,7 +99,7 @@ func generateRandomGame(w http.ResponseWriter, req *http.Request) {
 		newGame, err := model.NewGame(&user.Id)
 		if err != nil {
 			log.Printf("Error while creating game for user: %+v %s", user, err)
-			badRequest(w)
+			badRequest(w, err)
 			return
 		}
 		game = newGame
@@ -105,7 +123,7 @@ func guessGame(w http.ResponseWriter, req *http.Request) {
 
 	if err != nil {
 		log.Printf("Error while decoding guess: %s", err)
-		badRequest(w)
+		badRequest(w, err)
 		return
 	}
 
@@ -121,7 +139,7 @@ func guessGame(w http.ResponseWriter, req *http.Request) {
 
 	if err != nil {
 		log.Printf("Error setting the guess: %s", err)
-		badRequest(w)
+		badRequest(w, err)
 		return
 	}
 
@@ -129,7 +147,7 @@ func guessGame(w http.ResponseWriter, req *http.Request) {
 
 	if err != nil {
 		log.Printf("Calculating the score for the current guess went wrong: %s", err)
-		badRequest(w)
+		badRequest(w, err)
 		return
 	}
 

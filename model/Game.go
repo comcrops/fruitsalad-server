@@ -71,7 +71,7 @@ func (game *Game) AddGuess(guess Color) error {
 	}
 
 	if game.isFinished {
-		return errors.New("Game is already finished therefore no more scores can be added")
+		return errors.New("Game is already finished therefore no more guesses can be added")
 	}
 
 	if len(game.Guesses) >= 5 {
